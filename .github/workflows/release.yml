@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag for the release
+        required: true
+        default: v0.1.0-beta
+      title:
+        description: Release title
+        required: true
+        default: Beta 0.1
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Publish
+        run: >
+          dotnet publish -c Release --no-restore -r win-x64
+          --self-contained false
+          -o artifacts/EasyGameTranslator-Beta-0.1-win-x64
+
+      - name: Create archive
+        shell: pwsh
+        run: >
+          Compress-Archive
+          -Path artifacts/EasyGameTranslator-Beta-0.1-win-x64/*
+          -DestinationPath artifacts/EasyGameTranslator-Beta-0.1-win-x64.zip
+          -CompressionLevel Optimal
+
+      - name: Create or update GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_TITLE: ${{ inputs.title || github.ref_name }}
+        run: |
+          gh release view $env:RELEASE_TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:RELEASE_TAG `
+              artifacts/EasyGameTranslator-Beta-0.1-win-x64.zip `
+              --clobber
+          }
+          else {
+            gh release create $env:RELEASE_TAG `
+              artifacts/EasyGameTranslator-Beta-0.1-win-x64.zip `
+              --title $env:RELEASE_TITLE `
+              --notes-file RELEASE_NOTES.md `
+              --prerelease
+          }
