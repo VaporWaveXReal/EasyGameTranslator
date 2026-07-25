@@ -52,10 +52,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-          RELEASE_TITLE: ${{ inputs.title || github.ref_name }}
+          RELEASE_TITLE: ${{ inputs.title || 'EasyGameTranslator 0.1 Beta' }}
         run: |
           gh release view $env:RELEASE_TAG *> $null
           if ($LASTEXITCODE -eq 0) {
+            gh release edit $env:RELEASE_TAG `
+              --title $env:RELEASE_TITLE `
+              --notes-file RELEASE_NOTES.md `
+              --prerelease
+            gh release delete-asset $env:RELEASE_TAG `
+              EasyGameTranslator-Beta-0.1-win-x64.zip `
+              --yes 2>$null
             gh release upload $env:RELEASE_TAG `
               artifacts/EasyGameTranslator-0.1-Beta-win-x64.zip `
               --clobber
