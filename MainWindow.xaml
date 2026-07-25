@@ -1,0 +1,51 @@
+<Window x:Class="EasyGameTranslator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="EasyGameTranslator" Height="440" Width="500" MinHeight="440" MinWidth="500"
+        WindowStartupLocation="CenterScreen" Background="#17191E" Foreground="#F4F4F5">
+  <Window.Resources>
+    <Style TargetType="TextBlock"><Setter Property="Margin" Value="0,0,0,6" /></Style>
+    <Style TargetType="ComboBox"><Setter Property="Padding" Value="8,5" /></Style>
+    <Style TargetType="Button"><Setter Property="Padding" Value="16,9" /><Setter Property="Margin" Value="0,0,8,0" /></Style>
+  </Window.Resources>
+  <Grid Margin="24">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+    <TextBlock Text="EasyGameTranslator" FontSize="22" FontWeight="SemiBold" />
+    <StackPanel Grid.Row="1" Margin="0,0,0,14">
+      <TextBlock Text="Английский → русский. Работает только в оконном или безрамочном режиме. Эксклюзивный полноэкранный режим не поддерживается."
+                 Foreground="#F2C86B" TextWrapping="Wrap" />
+      <TextBlock Text="Хоткеи: F7 — запуск · F6 — перезапуск · F8 — остановка"
+                 Foreground="#C5C7CE" TextWrapping="Wrap" Margin="0,2,0,0" />
+    </StackPanel>
+    <Grid Grid.Row="2" Margin="0,0,0,14">
+      <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="12" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+      <StackPanel>
+        <TextBlock Text="Окно для перевода" />
+        <ComboBox x:Name="WindowBox" DisplayMemberPath="Title" />
+      </StackPanel>
+      <Button Grid.Column="2" Content="Обновить" VerticalAlignment="Bottom" Margin="0" Click="RefreshWindows_Click" />
+    </Grid>
+    <Grid Grid.Row="3">
+      <StackPanel>
+        <TextBlock Text="Размер шрифта" />
+        <DockPanel>
+          <TextBlock x:Name="FontSizeText" Text="26 px" Width="48" VerticalAlignment="Center" />
+          <Slider x:Name="FontSizeSlider" Minimum="14" Maximum="44" Value="26" TickFrequency="2" IsSnapToTickEnabled="True" ValueChanged="FontSizeSlider_ValueChanged" />
+        </DockPanel>
+      </StackPanel>
+    </Grid>
+    <StackPanel Grid.Row="4" Margin="0,16,0,0">
+      <TextBlock Text="Переводчик: Яндекс · Beta 0.1" Foreground="#C5C7CE" />
+    </StackPanel>
+    <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,16,0,10">
+      <Button x:Name="StartButton" Content="Запустить перевод" Click="StartButton_Click" Background="#3763D9" Foreground="White" BorderThickness="0" />
+      <Button x:Name="StopButton" Content="Остановить" Click="StopButton_Click" IsEnabled="False" />
+    </StackPanel>
+    <Border Grid.Row="6" Background="#22252D" CornerRadius="8" Padding="12" Margin="0,8,0,0">
+      <TextBlock x:Name="StatusText" Text="Выберите окно, язык и запустите перевод." Foreground="#CDD0D9" TextWrapping="Wrap" />
+    </Border>
+  </Grid>
+</Window>

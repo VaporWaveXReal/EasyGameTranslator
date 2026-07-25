@@ -1,0 +1,40 @@
+name: Сообщить об ошибке
+description: Проблема в работе EasyGameTranslator
+title: "[Ошибка]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Спасибо за сообщение. Не прикладывайте ключи, токены и личные данные.
+  - type: input
+    id: version
+    attributes:
+      label: Версия программы
+      placeholder: Beta 0.1
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Windows и приложение
+      placeholder: Windows 11 24H2, название игры или браузера
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как воспроизвести
+      placeholder: Опишите действия по шагам
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Ожидаемый и фактический результат
+    validations:
+      required: true
+  - type: textarea
+    id: media
+    attributes:
+      label: Дополнительные материалы
+      description: Перетащите сюда снимок экрана, видео или журнал.

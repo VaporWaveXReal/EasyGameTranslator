@@ -1,0 +1,32 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+release-*/
+publish*/
+artifacts/
+
+# IDE and user settings
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local diagnostics and generated files
+video-analysis*/
+__pycache__/
+.paddlex/
+smoke/
+ocr_worker.py
+PaddleOcrClient.cs
+*.pyc
+*.log
+*-screen-test.png
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
