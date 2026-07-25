@@ -1,4 +1,4 @@
-# EasyGameTranslator — Beta 0.1
+# EasyGameTranslator 0.1 Beta
 
 Первый публичный бета-релиз экранного переводчика.
 

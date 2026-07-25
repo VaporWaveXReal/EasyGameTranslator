@@ -37,19 +37,82 @@ public sealed class WindowsOcrClient
             if (words.Count == 0)
                 continue;
 
-            var left = words.Min(word => word.BoundingRect.X);
-            var top = words.Min(word => word.BoundingRect.Y);
-            var right = words.Max(word => word.BoundingRect.X + word.BoundingRect.Width);
-            var bottom = words.Max(word => word.BoundingRect.Y + word.BoundingRect.Height);
-            var text = line.Text.Trim();
-            if (text.Length < 2)
-                continue;
+            // Windows OCR occasionally reports a speaker caption and the
+            // sentence below it as one logical OcrLine. Reconstruct physical
+            // rows from the word rectangles so a caption can never enlarge
+            // the sentence overlay merely because the OCR engine grouped it.
+            foreach (var row in SplitIntoPhysicalRows(words
+                         .Select(word => new OcrWordBox(
+                             new RectangleF(
+                                 (float)word.BoundingRect.X,
+                                 (float)word.BoundingRect.Y,
+                                 (float)word.BoundingRect.Width,
+                                 (float)word.BoundingRect.Height),
+                             word.Text))
+                         .ToArray()))
+            {
+                var ordered = row.OrderBy(word => word.Bounds.Left).ToArray();
+                var text = string.Join(" ", ordered.Select(word => word.Text)).Trim();
+                if (text.Length < 2)
+                    continue;
 
-            lines.Add(new RecognizedLine(
-                new RectangleF((float)left, (float)top, (float)(right - left), (float)(bottom - top)),
-                text));
+                var left = ordered.Min(word => word.Bounds.Left);
+                var top = ordered.Min(word => word.Bounds.Top);
+                var right = ordered.Max(word => word.Bounds.Right);
+                var bottom = ordered.Max(word => word.Bounds.Bottom);
+                lines.Add(new RecognizedLine(
+                    RectangleF.FromLTRB(left, top, right, bottom),
+                    text));
+            }
         }
 
         return lines;
     }
+
+    private static IReadOnlyList<IReadOnlyList<OcrWordBox>> SplitIntoPhysicalRows(
+        IReadOnlyList<OcrWordBox> words)
+    {
+        var rows = new List<List<OcrWordBox>>();
+        foreach (var word in words.OrderBy(word => VerticalMiddle(word.Bounds)).ThenBy(word => word.Bounds.Left))
+        {
+            var bestRow = rows
+                .Select(row => new
+                {
+                    Row = row,
+                    Difference = Math.Abs(
+                        VerticalMiddle(Union(row.Select(item => item.Bounds))) -
+                        VerticalMiddle(word.Bounds))
+                })
+                .Where(candidate =>
+                {
+                    var rowBounds = Union(candidate.Row.Select(item => item.Bounds));
+                    var tolerance = Math.Max(4, Math.Min(rowBounds.Height, word.Bounds.Height) * 0.55f);
+                    return candidate.Difference <= tolerance;
+                })
+                .OrderBy(candidate => candidate.Difference)
+                .FirstOrDefault();
+
+            if (bestRow is null)
+                rows.Add([word]);
+            else
+                bestRow.Row.Add(word);
+        }
+
+        return rows;
+    }
+
+    private static float VerticalMiddle(RectangleF bounds) =>
+        bounds.Top + bounds.Height / 2;
+
+    private static RectangleF Union(IEnumerable<RectangleF> rectangles)
+    {
+        var values = rectangles.ToArray();
+        return RectangleF.FromLTRB(
+            values.Min(value => value.Left),
+            values.Min(value => value.Top),
+            values.Max(value => value.Right),
+            values.Max(value => value.Bottom));
+    }
+
+    private sealed record OcrWordBox(RectangleF Bounds, string Text);
 }

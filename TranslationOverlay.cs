@@ -82,10 +82,19 @@ public sealed class TranslationOverlay : IDisposable
 
 internal sealed class TranslationCardWindow : Window
 {
+    private const int WmMouseActivate = 0x0021;
+    private const int WmNcHitTest = 0x0084;
+    private const int HtTransparent = -1;
+    private const int MaNoActivate = 3;
     private const int GwlExStyle = -20;
     private const long WsExTransparent = 0x00000020L;
     private const long WsExToolWindow = 0x00000080L;
     private const long WsExNoActivate = 0x08000000L;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoZOrder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpFrameChanged = 0x0020;
     private const uint WdaExcludeFromCapture = 0x00000011;
     private readonly TextBlock _text;
     private readonly Border _background;
@@ -118,6 +127,7 @@ internal sealed class TranslationCardWindow : Window
             // The source remains visible through the card while the Russian
             // text itself stays fully opaque and easy to read.
             Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 0, 0, 0)),
+            IsHitTestVisible = false,
             Child = _text
         };
         Content = _background;
@@ -143,14 +153,45 @@ internal sealed class TranslationCardWindow : Window
         var handle = new WindowInteropHelper(this).Handle;
         var source = HwndSource.FromHwnd(handle);
         if (source?.CompositionTarget is not null)
+        {
             source.CompositionTarget.BackgroundColor = System.Windows.Media.Colors.Transparent;
+            source.AddHook(WindowProcedure);
+        }
         var margins = new DwmMargins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
         DwmExtendFrameIntoClientArea(handle, ref margins);
 
         var style = GetWindowLongPtr(handle, GwlExStyle).ToInt64();
         SetWindowLongPtr(handle, GwlExStyle, new IntPtr(style | WsExTransparent | WsExToolWindow | WsExNoActivate));
+        SetWindowPos(
+            handle,
+            IntPtr.Zero,
+            0,
+            0,
+            0,
+            0,
+            SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoActivate | SwpFrameChanged);
         if (!SetWindowDisplayAffinity(handle, WdaExcludeFromCapture))
             throw new InvalidOperationException($"Windows не включила исключение оверлея из захвата (код {Marshal.GetLastWin32Error()}).");
+    }
+
+    private static IntPtr WindowProcedure(
+        IntPtr hwnd,
+        int message,
+        IntPtr wParam,
+        IntPtr lParam,
+        ref bool handled)
+    {
+        switch (message)
+        {
+            case WmNcHitTest:
+                handled = true;
+                return new IntPtr(HtTransparent);
+            case WmMouseActivate:
+                handled = true;
+                return new IntPtr(MaNoActivate);
+            default:
+                return IntPtr.Zero;
+        }
     }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr", SetLastError = true)]
@@ -161,6 +202,16 @@ internal sealed class TranslationCardWindow : Window
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int width,
+        int height,
+        uint flags);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref DwmMargins margins);

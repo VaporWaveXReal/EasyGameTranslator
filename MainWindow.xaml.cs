@@ -9,13 +9,23 @@ namespace EasyGameTranslator;
 public partial class MainWindow : Window
 {
     private const int WmHotKey = 0x0312;
+    private const int WmKeyDown = 0x0100;
+    private const int WmKeyUp = 0x0101;
+    private const int WmSysKeyDown = 0x0104;
+    private const int WmSysKeyUp = 0x0105;
+    private const int WhKeyboardLl = 13;
+    private const uint ModNoRepeat = 0x4000;
     private const int StopHotKeyId = 1;
     private const int StartHotKeyId = 2;
     private const int RestartHotKeyId = 3;
     private readonly CaptureCoordinator _coordinator;
     private readonly UserSettings _settings;
     private readonly SemaphoreSlim _operationGate = new(1, 1);
+    private readonly Dictionary<int, long> _lastHotKeyDispatch = [];
+    private readonly HashSet<uint> _pressedHotKeys = [];
     private IntPtr _handle;
+    private IntPtr _keyboardHook;
+    private LowLevelKeyboardProcedure? _keyboardHookProcedure;
     private System.Windows.Forms.NotifyIcon? _trayIcon;
     private bool _isClosing;
     private bool _isTranslationRunning;
@@ -35,9 +45,19 @@ public partial class MainWindow : Window
         base.OnSourceInitialized(e);
         _handle = new WindowInteropHelper(this).Handle;
         HwndSource.FromHwnd(_handle)?.AddHook(WindowProc);
-        RegisterHotKey(_handle, StartHotKeyId, 0, (uint)KeyInterop.VirtualKeyFromKey(Key.F7));
-        RegisterHotKey(_handle, RestartHotKeyId, 0, (uint)KeyInterop.VirtualKeyFromKey(Key.F6));
-        RegisterHotKey(_handle, StopHotKeyId, 0, (uint)KeyInterop.VirtualKeyFromKey(Key.F8));
+        RegisterHotKey(_handle, StartHotKeyId, ModNoRepeat, (uint)KeyInterop.VirtualKeyFromKey(Key.F7));
+        RegisterHotKey(_handle, RestartHotKeyId, ModNoRepeat, (uint)KeyInterop.VirtualKeyFromKey(Key.F6));
+        RegisterHotKey(_handle, StopHotKeyId, ModNoRepeat, (uint)KeyInterop.VirtualKeyFromKey(Key.F8));
+
+        // RegisterHotKey may fail when a game or another overlay already owns
+        // an F-key. A low-level listener provides a non-blocking fallback and
+        // still lets the original key reach the game.
+        _keyboardHookProcedure = KeyboardHookProcedure;
+        _keyboardHook = SetWindowsHookEx(
+            WhKeyboardLl,
+            _keyboardHookProcedure,
+            GetModuleHandle(null),
+            0);
     }
 
     private async void StartButton_Click(object sender, RoutedEventArgs e) => await StartTranslationAsync();
@@ -161,19 +181,64 @@ public partial class MainWindow : Window
         switch (wParam.ToInt32())
         {
             case StartHotKeyId:
-                _ = StartTranslationAsync();
+                DispatchHotKey(StartHotKeyId);
                 handled = true;
                 break;
             case RestartHotKeyId:
-                _ = RestartTranslationAsync();
+                DispatchHotKey(RestartHotKeyId);
                 handled = true;
                 break;
             case StopHotKeyId:
-                _ = StopAndShowAsync();
+                DispatchHotKey(StopHotKeyId);
                 handled = true;
                 break;
         }
         return IntPtr.Zero;
+    }
+
+    private IntPtr KeyboardHookProcedure(int code, IntPtr wParam, IntPtr lParam)
+    {
+        if (code >= 0)
+        {
+            var keyData = Marshal.PtrToStructure<LowLevelKeyboardInput>(lParam);
+            var hotKeyId = keyData.VirtualKey switch
+            {
+                0x75 => RestartHotKeyId, // F6
+                0x76 => StartHotKeyId,   // F7
+                0x77 => StopHotKeyId,    // F8
+                _ => 0
+            };
+            var message = wParam.ToInt32();
+            if (hotKeyId != 0 &&
+                (message == WmKeyDown || message == WmSysKeyDown) &&
+                _pressedHotKeys.Add(keyData.VirtualKey))
+                Dispatcher.BeginInvoke(() => DispatchHotKey(hotKeyId));
+            else if (message == WmKeyUp || message == WmSysKeyUp)
+                _pressedHotKeys.Remove(keyData.VirtualKey);
+        }
+
+        return CallNextHookEx(_keyboardHook, code, wParam, lParam);
+    }
+
+    private void DispatchHotKey(int hotKeyId)
+    {
+        var now = Environment.TickCount64;
+        if (_lastHotKeyDispatch.TryGetValue(hotKeyId, out var previous) && now - previous < 250)
+            return;
+        _lastHotKeyDispatch[hotKeyId] = now;
+
+        switch (hotKeyId)
+        {
+            case StartHotKeyId:
+                _ = StartTranslationAsync();
+                break;
+            case RestartHotKeyId:
+                _ = RestartTranslationAsync();
+                break;
+            case StopHotKeyId:
+                _ = StopAndShowAsync();
+                break;
+        }
     }
 
     protected override async void OnClosing(CancelEventArgs e)
@@ -193,6 +258,11 @@ public partial class MainWindow : Window
             UnregisterHotKey(_handle, RestartHotKeyId);
             UnregisterHotKey(_handle, StopHotKeyId);
         }
+        if (_keyboardHook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(_keyboardHook);
+            _keyboardHook = IntPtr.Zero;
+        }
         if (_trayIcon is not null)
         {
             _trayIcon.Visible = false;
@@ -211,7 +281,7 @@ public partial class MainWindow : Window
         StartButton.IsEnabled = true;
         StopButton.IsEnabled = false;
         SetStatus(message);
-        System.Windows.MessageBox.Show(message, "EasyGameTranslator", MessageBoxButton.OK, MessageBoxImage.Error);
+        System.Windows.MessageBox.Show(message, "EasyGameTranslator 0.1 Beta", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private void CreateTrayIcon()
@@ -225,7 +295,7 @@ public partial class MainWindow : Window
         _trayIcon = new System.Windows.Forms.NotifyIcon
         {
             Icon = System.Drawing.SystemIcons.Application,
-            Text = "EasyGameTranslator",
+            Text = "EasyGameTranslator 0.1 Beta",
             ContextMenuStrip = menu,
             Visible = true
         };
@@ -237,4 +307,36 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    private delegate IntPtr LowLevelKeyboardProcedure(int code, IntPtr wParam, IntPtr lParam);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LowLevelKeyboardInput
+    {
+        public uint VirtualKey;
+        public uint ScanCode;
+        public uint Flags;
+        public uint Time;
+        public IntPtr ExtraInfo;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(
+        int hookId,
+        LowLevelKeyboardProcedure procedure,
+        IntPtr module,
+        uint threadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hook);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(
+        IntPtr hook,
+        int code,
+        IntPtr wParam,
+        IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string? moduleName);
 }

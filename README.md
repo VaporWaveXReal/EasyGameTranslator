@@ -1,10 +1,10 @@
-# EasyGameTranslator
+# EasyGameTranslator 0.1 Beta
 
 Экранный переводчик английского текста для игр и приложений Windows. Программа
 захватывает выбранное окно, распознаёт текст встроенным Windows OCR, переводит
 его через Яндекс и показывает перевод поверх оригинала.
 
-> Текущая версия: **Beta 0.1**. Возможны ошибки распознавания и совместимости с
+> Текущая версия: **EasyGameTranslator 0.1 Beta**. Возможны ошибки распознавания и совместимости с
 > отдельными играми.
 
 ## Возможности
@@ -18,7 +18,7 @@
 
 ## Установка
 
-1. Скачайте архив `EasyGameTranslator-Beta-0.1-win-x64.zip` на странице
+1. Скачайте архив `EasyGameTranslator-0.1-Beta-win-x64.zip` на странице
    [Releases](https://github.com/VaporWaveXReal/EasyGameTranslator/releases).
 2. Распакуйте архив в отдельную папку.
 3. Запустите `EasyGameTranslator.exe`.

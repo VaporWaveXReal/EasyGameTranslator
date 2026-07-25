@@ -13,7 +13,7 @@ on:
       title:
         description: Release title
         required: true
-        default: Beta 0.1
+        default: EasyGameTranslator 0.1 Beta
 
 permissions:
   contents: write
@@ -37,14 +37,14 @@ jobs:
         run: >
           dotnet publish -c Release --no-restore -r win-x64
           --self-contained false
-          -o artifacts/EasyGameTranslator-Beta-0.1-win-x64
+          -o artifacts/EasyGameTranslator-0.1-Beta-win-x64
 
       - name: Create archive
         shell: pwsh
         run: >
           Compress-Archive
-          -Path artifacts/EasyGameTranslator-Beta-0.1-win-x64/*
-          -DestinationPath artifacts/EasyGameTranslator-Beta-0.1-win-x64.zip
+          -Path artifacts/EasyGameTranslator-0.1-Beta-win-x64/*
+          -DestinationPath artifacts/EasyGameTranslator-0.1-Beta-win-x64.zip
           -CompressionLevel Optimal
 
       - name: Create or update GitHub release
@@ -57,12 +57,12 @@ jobs:
           gh release view $env:RELEASE_TAG *> $null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $env:RELEASE_TAG `
-              artifacts/EasyGameTranslator-Beta-0.1-win-x64.zip `
+              artifacts/EasyGameTranslator-0.1-Beta-win-x64.zip `
               --clobber
           }
           else {
             gh release create $env:RELEASE_TAG `
-              artifacts/EasyGameTranslator-Beta-0.1-win-x64.zip `
+              artifacts/EasyGameTranslator-0.1-Beta-win-x64.zip `
               --title $env:RELEASE_TITLE `
               --notes-file RELEASE_NOTES.md `
               --prerelease

@@ -113,6 +113,11 @@ public sealed class CaptureCoordinator
                 var rawLines = await ocr.ReadAsync(bitmap, token);
                 var lines = MergeDialogueLines(rawLines
                         .Where(line => SourceTextFilter.IsMergeCandidate(line.Text, language))
+                        // A speaker caption is metadata for the dialogue, not
+                        // part of the sentence. Remove it before any geometry
+                        // is merged; filtering it only after merging leaves
+                        // the final overlay with the caption's extra height.
+                        .Where(line => !SourceTextFilter.IsStandaloneName(line.Text, language))
                         .ToArray())
                     .Where(line => SourceTextFilter.IsTranslatable(line.Text, language))
                     .OrderBy(line => line.Bounds.Top)
@@ -570,6 +575,14 @@ internal static partial class SourceTextFilter
         if (Latin.Matches(text).Count < 2)
             return false;
         return !IsDecorativeAllCaps(text);
+    }
+
+    public static bool IsStandaloneName(string source, string language)
+    {
+        if (!language.Equals("en", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return ProperName.IsMatch(source.Trim());
     }
 
     public static bool IsTranslatable(string source, string language)
