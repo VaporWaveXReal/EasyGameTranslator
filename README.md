@@ -7,6 +7,26 @@
 > Текущая версия: **EasyGameTranslator 0.1 Beta**. Возможны ошибки распознавания и совместимости с
 > отдельными играми.
 
+## ❤️ Поддержать проект
+
+Если EasyGameTranslator оказался полезен, вы можете поддержать дальнейшую
+разработку:
+
+| Валюта | Сеть | Адрес |
+|---|---|---|
+| Gram (TonCoin) | TON | `UQAq90X97DbxDJ_6B9IU14qBE5W4cGvjWNUTFIjybPRsPEp1` |
+| Bitcoin | Bitcoin | `bc1qwrzljw6gx3rdrf6428q5p6mgt3pf24fsnuqwjh` |
+| ETH | Ethereum | `0x5D8b7f8Ec58E03C56B806B11A52eC2c6D16f5a1d` |
+| USDT | TRON (TRC-20) | `TJ3hyPm5fFWrf3XqbaL4C5TTWVjf3TP7sw` |
+| USDT | Ethereum (ERC-20) | `0x5D8b7f8Ec58E03C56B806B11A52eC2c6D16f5a1d` |
+| USDT | TON | `UQAq90X97DbxDJ_6B9IU14qBE5W4cGvjWNUTFIjybPRsPEp1` |
+| USDT | Solana | `5GFPaxnYVS1vgg8qJCvWKUiVSjmAAiYNhFSGLikT3SWq` |
+| TRX | TRON | `TJ3hyPm5fFWrf3XqbaL4C5TTWVjf3TP7sw` |
+| SOL | Solana | `5GFPaxnYVS1vgg8qJCvWKUiVSjmAAiYNhFSGLikT3SWq` |
+
+> **Важно:** перед отправкой обязательно проверьте валюту, адрес и выбранную
+> сеть. Перевод через несовместимую сеть может привести к потере средств.
+
 ## Возможности
 
 - перевод с английского на русский;
